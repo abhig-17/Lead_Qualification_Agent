@@ -22,20 +22,21 @@ The **Lead Qualification Agent** solves this by decoupling numerical scoring fro
 
 ```mermaid
 flowchart TD
-    A[Inbound Lead Input\nJSON / CSV / Raw Email Text] --> B[Lead Agent Orchestrator]
-    B --> C{Unstructured Text?}
-    C -- Yes --> D[Combined LLM Extraction + Analysis\nSingle Round-Trip]
-    C -- No --> E[Structured Fields]
+    A["Inbound Lead Input<br/>(JSON / CSV / Raw Email Text)"] --> B["Lead Agent Orchestrator"]
+    B --> C{"Unstructured Text?"}
+    C -->|Yes| D["Combined LLM Extraction + Analysis<br/>(Single Round-Trip)"]
+    C -->|No| E["Structured Fields"]
     D --> E
-    E --> F[Deterministic Scoring Engine]
-    F --> G1[Fit Score 0-100\n45% Weight]
-    F --> G2[Intent Score 0-100\n55% Weight]
-    G1 & G2 --> H[Overall Score\nround 0.45×Fit + 0.55×Intent]
-    H --> I[Tier Classification\nHOT ≥ 75 | WARM ≥ 50 | COLD < 50]
-    I --> J[LLM Narrative Synthesis\nSummary, Signals & Sales Action]
-    J --> K[Deterministic Ranker & Tie-Breaker]
-    K --> L[(SQLite Persistence)]
-    K --> M[JSON Output / REST API / Web Dashboard]
+    E --> F["Deterministic Scoring Engine"]
+    F --> G1["Fit Score (0–100)<br/>45% Weight"]
+    F --> G2["Intent Score (0–100)<br/>55% Weight"]
+    G1 --> H["Overall Score<br/>round(0.45 × Fit + 0.55 × Intent)"]
+    G2 --> H
+    H --> I["Tier Classification<br/>HOT (≥ 75) • WARM (50–74) • COLD (under 50)"]
+    I --> J["LLM Narrative Synthesis<br/>(Summary, Signals & Sales Action)"]
+    J --> K["Deterministic Ranker & Tie-Breaker"]
+    K --> L[("SQLite Persistence")]
+    K --> M["JSON Output / REST API / Web Dashboard"]
 ```
 
 ---
@@ -141,7 +142,7 @@ Lead Qualification Agent/
 ### 1. Clone & Set Up Virtual Environment
 ```bash
 git clone https://github.com/abhig-17/Lead_Qualification_Agent
-cd LeadQualificationAgent
+cd Lead_Qualification_Agent
 
 python -m venv venv
 # Windows:
