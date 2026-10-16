@@ -12,9 +12,9 @@ Sales teams often receive hundreds of inbound leads daily through web forms, ema
 
 The **Lead Qualification Agent** solves this by decoupling numerical scoring from generative narrative synthesis:
 
-1. **100% Deterministic Scoring Engine** — Fit Score (0–100 across 5 business categories) and Intent Score (0–100 across 5 engagement categories) are calculated with transparent rule logic. No LLM touches the numbers.
-2. **Zero-Hallucination LLM Rationale** — The LLM is strictly restricted to extracting missing properties from raw text and generating tailored sales actions. Missing information is explicitly reported as `"Not provided"`.
-3. **Deterministic Ranking & Tie-Breaking** — Leads are ranked by score with a multi-step tie-breaker, guaranteeing a consistent, prioritized outreach queue every run.
+1. **100% Deterministic Scoring Engine** - Fit Score (0–100 across 5 business categories) and Intent Score (0–100 across 5 engagement categories) are calculated with transparent rule logic. No LLM touches the numbers.
+2. **Zero-Hallucination LLM Rationale** - The LLM is strictly restricted to extracting missing properties from raw text and generating tailored sales actions. Missing information is explicitly reported as `"Not provided"`.
+3. **Deterministic Ranking & Tie-Breaking** - Leads are ranked by score with a multi-step tie-breaker, guaranteeing a consistent, prioritized outreach queue every run.
 
 ---
 
