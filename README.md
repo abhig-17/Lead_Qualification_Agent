@@ -140,7 +140,7 @@ Lead Qualification Agent/
 
 ### 1. Clone & Set Up Virtual Environment
 ```bash
-git clone https://github.com/abhig-17/LeadQualificationAgent.git
+git clone https://github.com/abhig-17/Lead_Qualification_Agent
 cd LeadQualificationAgent
 
 python -m venv venv
