@@ -14,7 +14,7 @@ The numerical Fit Score, Intent Score, Overall Score, and Tier (HOT/WARM/COLD) a
 YOUR TASKS:
 1. Provide a concise, evidence-based summary of the lead (1-2 sentences).
 2. Identify positive buying signals directly supported by the text.
-3. Identify negative/risk signals supported by the text.
+3. Identify negative/risk signals supported by the text.  
 4. Recommend a practical, customized next sales action based on the tier and actual lead context.
 
 Return ONLY a valid JSON object adhering strictly to the schema requested without markdown wrappers or commentary outside JSON.
