@@ -1,19 +1,20 @@
 # Lead Qualification Agent 🎯
 
-A production-grade, end-to-end AI agent system built for the **Rooman AI Agent Challenge**. The agent analyzes inbound lead information (structured forms, sales notes, or raw email text), deterministically scores each lead on **Fit** and **Intent**, classifies leads into **HOT**, **WARM**, or **COLD** tiers, ranks leads for sales teams, and generates actionable, evidence-based recommendations so sales teams know **who to call first**.
+A production-grade, end-to-end AI agent system for qualifying inbound sales leads. The agent analyzes structured forms, sales notes, or raw email text, deterministically scores each lead on **Fit** and **Intent**, classifies them into **HOT**, **WARM**, or **COLD** tiers, and generates actionable, evidence-based recommendations so sales teams know **who to call first**.
 
 ---
 
 ## 📌 Problem
 
-Sales teams often receive hundreds of inbound leads daily through web forms, emails, and campaign responses. Reps waste critical time manually reviewing unstructured inquiries, leading to delayed response times for urgent high-value leads and missed conversion opportunities. Generic LLM chatbots or random AI scoring engines are prone to hallucinations, non-reproducible score volatility, and invented budgets or timelines.
+Sales teams often receive hundreds of inbound leads daily through web forms, emails, and campaign responses. Reps waste critical time manually reviewing unstructured inquiries, leading to delayed responses for urgent high-value leads and missed conversion opportunities. Generic LLM scoring engines are prone to hallucinations, non-reproducible score volatility, and invented budgets or timelines.
 
 ## 💡 Solution
 
-The **Lead Qualification Agent** solves this problem by decoupling numerical lead scoring from generative narrative synthesis:
-1. **100% Deterministic Scoring Engine**: Fit Score (0–100 across 5 explicit business categories) and Intent Score (0–100 across 5 explicit engagement categories) are calculated using transparent rule logic.
-2. **Zero-Hallucination LLM Rationale**: The LLM is strictly restricted to extracting missing properties from raw text (`email_text`/`notes`), identifying factual buying and risk signals, and generating tailored next sales actions. Missing information is explicitly reported as `"Not provided"` or `"Unknown"`.
-3. **Deterministic Ranking & Tie-Breaking**: Ranks leads descending by score and applies tie-breaker logic to ensure sales reps always have a clear, prioritized daily outreach queue.
+The **Lead Qualification Agent** solves this by decoupling numerical scoring from generative narrative synthesis:
+
+1. **100% Deterministic Scoring Engine** — Fit Score (0–100 across 5 business categories) and Intent Score (0–100 across 5 engagement categories) are calculated with transparent rule logic. No LLM touches the numbers.
+2. **Zero-Hallucination LLM Rationale** — The LLM is strictly restricted to extracting missing properties from raw text and generating tailored sales actions. Missing information is explicitly reported as `"Not provided"`.
+3. **Deterministic Ranking & Tie-Breaking** — Leads are ranked by score with a multi-step tie-breaker, guaranteeing a consistent, prioritized outreach queue every run.
 
 ---
 
@@ -23,99 +24,110 @@ The **Lead Qualification Agent** solves this problem by decoupling numerical lea
 flowchart TD
     A[Inbound Lead Input\nJSON / CSV / Raw Email Text] --> B[Lead Agent Orchestrator]
     B --> C{Unstructured Text?}
-    C -- Yes --> D[LLM / Rule Extraction Engine]
+    C -- Yes --> D[Combined LLM Extraction + Analysis\nSingle Round-Trip]
     C -- No --> E[Structured Fields]
     D --> E
     E --> F[Deterministic Scoring Engine]
-    F --> G1[Fit Analysis 0-100\n45% Weight]
-    F --> G2[Intent Analysis 0-100\n55% Weight]
-    G1 & G2 --> H[Overall Score Calculation\nround 0.45*Fit + 0.55*Intent]
+    F --> G1[Fit Score 0-100\n45% Weight]
+    F --> G2[Intent Score 0-100\n55% Weight]
+    G1 & G2 --> H[Overall Score\nround 0.45×Fit + 0.55×Intent]
     H --> I[Tier Classification\nHOT ≥ 75 | WARM ≥ 50 | COLD < 50]
     I --> J[LLM Narrative Synthesis\nSummary, Signals & Sales Action]
-    J --> K[Deterministic Lead Ranker & Tie-Breaker]
-    K --> L[(SQLite Database Persistence)]
-    K --> M[Output Outputs/sample_output.json / API Response / Streamlit UI]
+    J --> K[Deterministic Ranker & Tie-Breaker]
+    K --> L[(SQLite Persistence)]
+    K --> M[JSON Output / REST API / Web Dashboard]
 ```
 
 ---
 
-## 📊 Scoring Logic & Breakdown
+## 📊 Scoring Logic
 
-The overall qualification score is calculated as:
+Overall score formula:
+
 $$\text{Overall Score} = \text{round}\left( (\text{Fit Score} \times 0.45) + (\text{Intent Score} \times 0.55) \right)$$
 
-Intent is weighted slightly higher (55%) because high immediate intent warrants faster sales response.
+Intent is weighted slightly higher (55%) because high immediate intent warrants faster sales response, regardless of company size.
 
-### 1. FIT SCORE (0–100 points max)
+### 1. FIT SCORE (0–100)
 Evaluates how closely the lead matches the ideal customer profile (ICP):
-* **Company/Industry Relevance (0–25 pts)**: High-target sectors (B2B SaaS, AI, Cloud, DeepTech) = 25 pts; Medium (Manufacturing, Logistics, Financials) = 18 pts; Low (Retail, Hospitality) = 10 pts; Unknown = 5 pts.
-* **Company Size (0–20 pts)**: Enterprise 500+ = 20 pts; Mid-Market 100–499 = 16 pts; Growing SMB 20–99 = 12 pts; Micro SMB 1–19 = 6 pts; Unknown = 0 pts.
-* **Decision-Making Authority (0–20 pts)**: Executive/C-Level/VP/Founder = 20 pts; Director/Manager = 15 pts; Senior IC = 10 pts; Entry/Student = 3 pts; Unknown = 5 pts.
-* **Budget Compatibility (0–20 pts)**: $\ge \$50\text{k}$ = 20 pts; $\$20\text{k}\text{--}\$49.9\text{k}$ = 16 pts; $\$5\text{k}\text{--}\$19.9\text{k}$ = 10 pts; $<\$5\text{k}$ = 4 pts; No budget / Unknown = 0 pts.
-* **Geographic Compatibility (0–15 pts)**: Tier 1 markets (US, UK, CA, AU, DE, IN) = 15 pts; Tier 2 = 10 pts; Other = 6 pts; Unknown = 5 pts.
 
-### 2. INTENT SCORE (0–100 points max)
-Evaluates urgency and buying signals:
-* **Explicit Product Interest (0–25 pts)**: Specific core platform solution specified = 25 pts; General interest = 15 pts; Vague = 8 pts; Missing = 0 pts.
-* **Purchase Timeline (0–25 pts)**: Urgent / Within 30 days = 25 pts; 1–3 months = 18 pts; 3–6 months = 10 pts; 6+ months / Researching = 4 pts; No timeline = 0 pts.
-* **Specific Requirements / Questions (0–20 pts)**: Detailed custom requirements / tech criteria = 20 pts; Basic questions = 12 pts; Minimal = 5 pts; Unknown = 0 pts.
-* **Pricing/Demo/Contact Request (0–15 pts)**: Explicit demo or pricing request = 15 pts; Inbound form = 10 pts; Content download = 5 pts; Unknown = 0 pts.
-* **Engagement / Urgency Signals (0–15 pts)**: Strong urgency ("evaluating 3 vendors", "budget approved") = 15 pts; Moderate = 10 pts; Negative signals (student, no project) = 0 pts.
+| Dimension | Max | Criteria |
+|---|:---:|---|
+| Company / Industry | 25 | High-target (B2B SaaS, AI, Cloud, DeepTech) = 25; Medium (Manufacturing, Logistics, Finance) = 18; Low (Retail, Hospitality) = 10; Unknown = 5 |
+| Company Size | 20 | Enterprise 500+ = 20; Mid-Market 100–499 = 16; Growing SMB 20–99 = 12; Micro SMB 1–19 = 6; Unknown = 0 |
+| Decision Authority | 20 | C-Level/VP/Founder = 20; Director/Manager = 15; Senior IC = 10; Entry/Student = 3; Unknown = 5 |
+| Budget | 20 | ≥$50k = 20; $20k–$49.9k = 16; $5k–$19.9k = 10; <$5k = 4; Unknown = 0 |
+| Geography | 15 | Tier 1 (US, UK, CA, AU, DE, IN) = 15; Tier 2 = 10; Other = 6; Unknown = 5 |
 
-### 3. LEAD TIERS
-Deterministic threshold cutoffs configured in `app/config.py`:
-* **🔥 HOT**: Overall Score $\ge 75$
-* **⚡ WARM**: Overall Score $50 \le \text{Score} < 75$
-* **❄️ COLD**: Overall Score $< 50$
+### 2. INTENT SCORE (0–100)
+Evaluates urgency and buying engagement:
+
+| Dimension | Max | Criteria |
+|---|:---:|---|
+| Product Interest | 25 | Specific named solution = 25; General interest = 15; Vague = 8; Missing = 0 |
+| Purchase Timeline | 25 | Within 30 days = 25; 1–3 months = 18; 3–6 months = 10; 6+ months = 4; No timeline = 0 |
+| Requirements / Questions | 20 | Detailed technical requirements = 20; Basic questions = 12; Minimal = 5; Unknown = 0 |
+| Demo / Pricing Request | 15 | Explicit demo or pricing request = 15; Inbound form = 10; Content download = 5; Unknown = 0 |
+| Urgency Signals | 15 | Strong ("budget approved", "evaluating 3 vendors") = 15; Moderate = 10; Negative (student, no project) = 0 |
+
+### 3. Lead Tiers
+
+| Tier | Threshold |
+|---|---|
+| 🔥 **HOT** | Overall Score ≥ 75 |
+| ⚡ **WARM** | 50 ≤ Overall Score < 75 |
+| ❄️ **COLD** | Overall Score < 50 |
+
+Thresholds are configurable in `.env` via `HOT_THRESHOLD` and `WARM_THRESHOLD`.
 
 ---
 
-## 🏆 Ranking & Tie-Breaking Logic
+## 🏆 Ranking & Tie-Breaking
 
-When multiple leads are qualified in a batch, leads are sorted descending to determine their rank ($1 \dots N$):
-1. **Overall Score** (descending)
-2. **Intent Score** (descending)
-3. **Purchase Timeline Urgency Score** (descending)
-4. **Explicit Demo/Pricing Request Present** (True before False)
-5. **Lead ID** (alphabetical ascending for deterministic reproducibility)
+When qualifying a batch, leads are sorted descending by:
+
+1. **Overall Score**
+2. **Intent Score**
+3. **Purchase Timeline urgency sub-score**
+4. **Explicit demo/pricing request** (True before False)
+5. **Lead ID** (alphabetical — ensures deterministic reproducibility)
 
 ---
 
 ## 📦 Project Structure
 
 ```
-lead-qualification-agent/
+Lead Qualification Agent/
 │
 ├── app/
 │   ├── __init__.py
-│   ├── main.py          # FastAPI application & REST endpoints
+│   ├── main.py          # FastAPI application & REST endpoints + web dashboard
 │   ├── config.py        # Pydantic Settings & threshold configuration
 │   ├── models.py        # SQLAlchemy ORM model for SQLite persistence
 │   ├── schemas.py       # Pydantic validation schemas
 │   ├── scoring.py       # Deterministic scoring engine & tie-breaker ranker
 │   ├── prompts.py       # System prompts & anti-hallucination templates
-│   ├── llm.py           # Structured OpenAI client integration & fallback
-│   ├── agent.py         # Main LeadQualificationAgent orchestrator
+│   ├── llm.py           # LLM client, combined extraction+analysis, fallback
+│   ├── agent.py         # LeadQualificationAgent orchestrator
 │   ├── database.py      # SQLite connection & CRUD repository
 │   └── utils.py         # CSV/JSON file loaders & CLI formatters
 │
 ├── data/
-│   ├── sample_leads.json # 10 diverse sample leads (HOT/WARM/COLD)
-│   └── sample_leads.csv  # CSV version of sample leads
+│   ├── sample_leads.json  # 10 diverse sample leads (HOT/WARM/COLD)
+│   ├── sample_leads.csv   # CSV version of sample leads
+│   └── test_leads.csv     # 12-lead test dataset with unstructured email rows
 │
 ├── tests/
 │   ├── __init__.py
-│   ├── test_scoring.py  # Unit tests for scoring engine & thresholds
-│   ├── test_agent.py    # Tests for agent orchestration & batching
-│   └── test_api.py      # Tests for FastAPI REST endpoints
+│   ├── test_scoring.py    # Unit tests for scoring engine & thresholds
+│   ├── test_agent.py      # Tests for agent orchestration & batching
+│   └── test_api.py        # Tests for FastAPI REST endpoints
 │
-├── outputs/
-│   └── sample_output.json # Pre-generated sample qualification output
-│
-├── requirements.txt     # Python dependencies
-├── .env.example         # Environment variable template
-├── README.md            # System documentation
-└── run.py               # CLI entrypoint runner
+├── outputs/               # JSON qualification results (git-ignored)
+├── requirements.txt       # Python dependencies
+├── .env.example           # Environment variable template
+├── run.py                 # CLI entrypoint
+└── README.md
 ```
 
 ---
@@ -123,18 +135,18 @@ lead-qualification-agent/
 ## ⚙️ Installation & Setup
 
 ### Prerequisites
-* Python 3.11+
-* pip package manager
+- Python 3.11+
+- An OpenAI-compatible API key (Groq, OpenAI, etc.) — optional; system runs fully offline without one.
 
 ### 1. Clone & Set Up Virtual Environment
 ```bash
-git clone <repository_url>
+git clone https://github.com/Abhishek/Lead-Qualification-Agent.git
 cd "Lead Qualification Agent"
 
 python -m venv venv
-# On Windows:
+# Windows:
 venv\Scripts\activate
-# On Linux/macOS:
+# macOS / Linux:
 source venv/bin/activate
 ```
 
@@ -143,15 +155,21 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Environment Variables
-Copy `.env.example` to `.env`:
+### 3. Configure Environment Variables
 ```bash
 cp .env.example .env
 ```
-Edit `.env` to supply your OpenAI API key (optional - system runs seamlessly with offline fallback if omitted):
+
+Edit `.env`:
 ```env
+# LLM provider — leave blank to run in offline fallback mode
 OPENAI_API_KEY=your_api_key_here
 MODEL_NAME=gpt-4o-mini
+
+# For Groq (example):
+# OPENAI_BASE_URL=https://api.groq.com/openai/v1
+# MODEL_NAME=llama-3.1-8b-instant
+
 DATABASE_URL=sqlite:///./leads.db
 HOT_THRESHOLD=75
 WARM_THRESHOLD=50
@@ -161,28 +179,26 @@ WARM_THRESHOLD=50
 
 ## 🚀 Running the Application
 
-### 1. Run Web Dashboard & REST API
-Start the FastAPI server:
+### 1. Web Dashboard & REST API
 ```bash
 python -m uvicorn app.main:app --reload --port 8000
 ```
-Then open your web browser at:
-* **Interactive AI Dashboard**: `http://localhost:8000`
-* **Swagger API Docs**: `http://localhost:8000/docs`
-* **ReDoc API Docs**: `http://localhost:8000/redoc`
 
-### 2. Run CLI Batch Runner
-Process sample leads and print ranked outputs directly in terminal:
+Open in your browser:
+- **Interactive Dashboard**: `http://localhost:8000`
+- **Swagger API Docs**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+### 2. CLI Batch Runner
 ```bash
+# Run on default sample dataset
 python run.py
-```
-To run against a custom CSV or JSON file:
-```bash
-python run.py --file data/sample_leads.csv --output outputs/my_output.json
+
+# Run on a custom file
+python run.py --file data/test_leads.csv --output outputs/my_output.json
 ```
 
-### 4. Run Automated Unit Tests
-Execute the comprehensive offline test suite:
+### 3. Automated Tests
 ```bash
 pytest
 ```
@@ -192,17 +208,13 @@ pytest
 ## 📡 API Reference
 
 ### `GET /health`
-Returns system status.
-**Response:**
 ```json
-{
-  "status": "ok"
-}
+{ "status": "ok" }
 ```
 
 ### `POST /qualify`
-Qualifies a single lead input.
-**Request Body:**
+Qualifies a single lead. Accepts both structured fields and/or raw `email_text` / `notes`.
+
 ```json
 {
   "name": "Sarah Johnson",
@@ -214,30 +226,32 @@ Qualifies a single lead input.
   "budget": "$50,000",
   "interest": "AI automation platform",
   "timeline": "Within 30 days",
-  "source": "Website demo request",
-  "notes": "We are evaluating three vendors and would like a demo and pricing."
+  "notes": "We are evaluating three vendors and would like a demo and pricing ASAP."
+}
+```
+
+Also accepts raw email with no structured fields:
+```json
+{
+  "email_text": "Hi, I'm Sarah, VP Eng at Acme SaaS. We have a $50k budget and need an AI tool within 30 days. Please send demo details."
 }
 ```
 
 ### `POST /qualify/batch`
 Qualifies a list of leads and returns deterministically ranked results.
-**Request Body:**
-```json
-[
-  { "lead_id": "L001", "name": "Sarah Johnson", "company": "Acme SaaS", "job_title": "VP Engineering", "industry": "B2B SaaS", "company_size": 200, "budget": "$50,000", "timeline": "Within 30 days", "notes": "Requesting demo" },
-  { "lead_id": "L002", "name": "Kevin Patel", "company": "BrightStar Media", "industry": "Media", "company_size": 15, "budget": "No budget", "timeline": "Just researching" }
-]
-```
 
 ### `GET /leads`
-Retrieves all stored qualification records from SQLite database ordered by rank.
+Returns all stored qualification records ordered by rank.
 
 ### `GET /leads/{lead_id}`
-Retrieves specific qualification record by lead ID.
+Returns a specific qualification record by lead ID.
+
+### `DELETE /leads/{lead_id}`
+Deletes a lead record.
 
 ---
 
-## 📑 Sample Output Format
+## 📑 Sample Output
 
 ```json
 {
@@ -251,12 +265,12 @@ Retrieves specific qualification record by lead ID.
       "name": "Sarah Johnson",
       "company": "Acme SaaS",
       "job_title": "VP Engineering",
+      "rank": 1,
       "fit_score": 96,
       "intent_score": 90,
       "overall_score": 93,
       "tier": "HOT",
-      "rank": 1,
-      "summary": "VP Engineering at Acme SaaS (B2B SaaS, 200 employees) interested in AI automation platform.",
+      "summary": "VP Engineering at Acme SaaS (B2B SaaS, 200 employees, US) has requested a product demo and pricing for an AI automation platform with a $50,000 budget within 30 days.",
       "buying_signals": [
         "Explicit request for product demo",
         "Requested pricing / quote details",
@@ -266,9 +280,9 @@ Retrieves specific qualification record by lead ID.
         "Strong budget compatibility ($50,000)"
       ],
       "risk_signals": [],
-      "reasoning": "Fit Score (96/100) based on industry relevance (25/25), company size (16/20), decision authority (20/20), budget (20/20), and location (15/15). Intent Score (90/100) based on product interest (25/25), timeline (25/25), requirements (10/20), contact request (15/15), and urgency (15/15). Overall Score = round(0.45 * 96 + 0.55 * 90) = 93 [HOT].",
-      "recommended_action": "Contact Sarah Johnson within 24 hours. Prioritize product demo and pricing discussion.",
-      "confidence": 0.92
+      "reasoning": "Fit Score (96/100) based on industry relevance (25/25), company size (16/20), decision authority (20/20), budget (20/20), and location (15/15). Intent Score (90/100) based on product interest (25/25), timeline (25/25), requirements (10/20), contact request (15/15), and urgency (15/15). Overall Score = round(0.45 × 96 + 0.55 × 90) = 93 [HOT].",
+      "recommended_action": "Schedule a personalized demo call today. Prepare a pricing proposal aligned with the $50k budget and 30-day decision timeline.",
+      "confidence": 0.95
     }
   ]
 }
@@ -278,37 +292,33 @@ Retrieves specific qualification record by lead ID.
 
 ## 🎯 Design Decisions
 
-1. **Why Deterministic Scoring over 100% LLM Prompting?**
-   Prompting an LLM to generate a numerical score (e.g. "Give this lead a score out of 100") introduces high score variance, non-reproducible output across runs, and vulnerability to prompt injection or hallucinated numbers. By separating numerical scoring into a rule engine and using the LLM strictly for natural language extraction and narrative synthesis, the system achieves 100% explainability, auditability, and zero score hallucination.
+**Why deterministic scoring instead of LLM-generated numbers?**
+Prompting an LLM for a numerical score introduces high variance, non-reproducibility, and vulnerability to hallucinated budgets or timelines. By separating scoring into a rule engine and using the LLM strictly for natural language narrative, the system achieves 100% explainability and zero score hallucination.
 
-2. **Why Weight Intent (55%) higher than Fit (45%)?**
-   A high-fit enterprise lead that has no purchase timeline or immediate interest ("just researching") should not displace a slightly smaller SMB lead that needs an active deployment within 30 days and requested a demo today. Intent reflects immediate revenue velocity.
+**Why weight Intent (55%) higher than Fit (45%)?**
+A high-fit enterprise lead with no purchase timeline should not displace a smaller SMB lead that needs deployment in 30 days and has already requested a demo. Intent reflects immediate revenue velocity.
 
-3. **Offline Fallback Architecture**:
-   If no OpenAI API key is present or if the LLM API times out, the system automatically falls back to regex-based extraction and template-based narrative generation, guaranteeing 0% runtime crash rate.
+**Why a combined LLM call for unstructured leads?**
+Leads with raw `email_text` or `notes` previously needed two sequential LLM calls (extraction → analysis). The combined `extract_and_analyze_combined()` function does both in a single round-trip, halving API latency for those leads.
 
----
-
-## ⚖️ Tradeoffs
-
-* **Accuracy vs. Simplicity**: Rule-based scoring requires pre-defined keyword lists and thresholds. While simple and reliable, extreme edge cases in specialized sub-niches may require periodic keyword updates.
-* **Rule Precision vs. Generalization**: Hardcoded thresholds (e.g. $50k budget = 20 pts) provide strict consistency but may require tier customization across different product lines.
-* **Unstructured Extraction Dependency**: Highly messy or ambiguous email text relies on LLM extraction. If the LLM is offline, fallback regex extraction captures basic entities but may miss nuanced secondary notes.
+**Offline fallback architecture:**
+If no API key is present or the LLM times out, the system falls back to regex-based extraction and template-based narrative generation — guaranteeing 0% crash rate in all network conditions.
 
 ---
 
-## 🚫 Limitations
+## ⚖️ Tradeoffs & Limitations
 
-* **Single Product Focus**: The current rules assume a single core product/service ICP model. Multi-product enterprises would need product-specific weight configurations.
-* **Static Keyword Lists**: Signal extraction relies on predefined buying and risk signal dictionaries.
-* **No Real-Time Enrichment**: Does not currently perform live web scraping (e.g., Clearbit / LinkedIn lookup) to auto-fill missing company data.
+- **Rule precision vs. generalization** — Hardcoded thresholds (e.g. $50k = 20 pts) are consistent but may need tuning for different product price points.
+- **Static keyword lists** — Buying and risk signal extraction relies on predefined dictionaries that may need updating for niche industries.
+- **No real-time enrichment** — Missing company data (size, location) is not auto-filled via external APIs (e.g. Clearbit, LinkedIn).
+- **Single ICP model** — Scoring assumes one product/service profile. Multi-product enterprises would need per-product weight configurations.
 
 ---
 
 ## 🔮 Future Improvements
 
-1. **CRM Integrations**: Bi-directional integration with Salesforce, HubSpot, and Pipedrive to sync lead tiers and trigger automated SDR task creation.
-2. **Historical Conversion Rate Learning**: Machine learning model trained on historic closed-won CRM deals to dynamically tune category weightings.
-3. **Multi-Product / Multi-ICP Configuration**: Dynamic scoring profiles selectable per business unit.
-4. **Third-Party Data Enrichment**: Automatic firmographic enrichment via ZoomInfo / Clearbit API when company fields are missing.
-5. **Human-in-the-Loop Review**: Sales rep feedback buttons ("Agree / Disagree with Tier") to refine signal extraction.
+1. **CRM Integrations** — Bi-directional sync with Salesforce, HubSpot, and Pipedrive to trigger SDR tasks automatically.
+2. **ML-Tuned Weights** — Train a lightweight model on historical closed-won deals to dynamically adjust category weightings.
+3. **Third-Party Enrichment** — Auto-fill firmographic gaps via ZoomInfo / Clearbit when company fields are missing.
+4. **Multi-ICP Configuration** — Dynamic scoring profiles selectable per business unit or product line.
+5. **Human-in-the-Loop Feedback** — Sales rep "Agree / Disagree" buttons to continuously refine signal extraction.

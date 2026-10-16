@@ -11,7 +11,6 @@ from app.scoring import (
     evaluate_lead_scores, extract_buying_and_risk_signals, rank_leads
 )
 from app.llm import (
-    extract_unstructured_lead_info,
     generate_llm_analysis,
     extract_and_analyze_combined,
 )

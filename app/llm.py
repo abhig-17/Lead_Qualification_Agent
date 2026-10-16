@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 from typing import Dict, Any, Optional
 from openai import OpenAI
 from app.config import settings
@@ -45,7 +46,6 @@ def fallback_extract_unstructured(text: str) -> ExtractedLeadAttributes:
     interest = None
     timeline = None
 
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
     text_lower = text.lower()
 
     # Budget extraction regex
@@ -120,7 +120,7 @@ def extract_unstructured_lead_info(text: str) -> ExtractedLeadAttributes:
             return ExtractedLeadAttributes(**parsed)
         except Exception as e:
             if "rate_limit" in str(e).lower() and attempt == 0:
-                import time; time.sleep(1.5)
+                time.sleep(1.5)
                 continue
             logger.error(f"LLM extraction error: {e}. Falling back to rule extraction.")
             return fallback_extract_unstructured(text)
@@ -257,7 +257,7 @@ Return the combined JSON with both "extracted" and "analysis" keys."""
 
         except Exception as e:
             if "rate_limit" in str(e).lower() and attempt == 0:
-                import time; time.sleep(1.5)
+                time.sleep(1.5)
                 continue
             logger.error(f"Combined LLM call failed: {e}. Falling back to individual calls.")
             break
@@ -287,9 +287,9 @@ def generate_fallback_analysis(
     industry = lead_dict.get("industry") or "Unspecified Industry"
     size = lead_dict.get("company_size") or "Unknown size"
     interest = lead_dict.get("interest") or "General inquiry"
-    
+
     summary = f"{title} at {company} ({industry}, {size} employees) interested in {interest}."
-    
+
     if tier == "HOT":
         action = f"Contact {name} within 24 hours. Prioritize product demo and pricing discussion."
     elif tier == "WARM":
@@ -379,13 +379,13 @@ Respond in structured JSON format with:
                 )
             raw_content = clean_json_response(response.choices[0].message.content or "{}")
             parsed = json.loads(raw_content)
-            
+
             # Ensure lead_id is present
             parsed["lead_id"] = str(lead_dict.get("lead_id", "L000"))
             return LLMLeadAnalysis(**parsed)
         except Exception as e:
             if "rate_limit" in str(e).lower() and attempt == 0:
-                import time; time.sleep(2.0)
+                time.sleep(2.0)
                 continue
             logger.error(f"LLM analysis error: {e}. Falling back to template analysis.")
             return generate_fallback_analysis(lead_dict, fit_score, intent_score, overall_score, tier, rule_buying_signals, rule_risk_signals)
