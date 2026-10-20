@@ -42,7 +42,7 @@ def parse_company_size(size_raw: Any) -> int:
     # Range handling e.g. "100-500", "200", "500+"
     matches = re.findall(r'\d+', s)
     if matches:
-        # If range like 100-500, take average or lower bound
+        
         nums = [int(m) for m in matches]
         return max(nums)
     return 0
