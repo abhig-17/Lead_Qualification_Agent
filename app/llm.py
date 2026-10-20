@@ -64,7 +64,7 @@ def fallback_extract_unstructured(text: str) -> ExtractedLeadAttributes:
     elif "month" in text_lower or "quarter" in text_lower:
         timeline = "1-3 months"
 
-    # Job title detection
+    
     for t in ["vp engineering", "vp sales", "cto", "ceo", "director of engineering", "head of sales", "product manager", "it manager"]:
         if t in text_lower:
             job_title = t.title()
