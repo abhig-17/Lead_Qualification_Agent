@@ -10,7 +10,6 @@ from app.schemas import LLMLeadAnalysis, ExtractedLeadAttributes
 
 logger = logging.getLogger(__name__)
 
-
 def get_openai_client() -> Optional[OpenAI]:
     """Returns an initialized OpenAI client if API key is present, else None."""
     api_key = settings.OPENAI_API_KEY.strip() if settings.OPENAI_API_KEY else ""
