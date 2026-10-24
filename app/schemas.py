@@ -17,7 +17,6 @@ class LeadInput(BaseModel):
     sales_notes: Optional[str] = Field(None, description="Internal sales notes")
     email_text: Optional[str] = Field(None, description="Raw email or inquiry text")
     notes: Optional[str] = Field(None, description="General notes")
-
     model_config = ConfigDict(extra="ignore")
 
 
